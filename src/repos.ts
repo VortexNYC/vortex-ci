@@ -36,11 +36,13 @@ const repoConfigs: Record<string, RepoConfig> = {
       "(cd apps/convert-worker && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/api && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/mcp-worker && pnpm exec wrangler deploy -e production) && " +
-      "(cd apps/web && pnpm exec wrangler deploy -e production)",
+      "(cd apps/web && pnpm exec wrangler deploy -e production) && " +
+      "(cd apps/site && pnpm exec wrangler deploy -e production)",
     previewCommand:
       '(cd apps/api && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
       '(cd apps/mcp-worker && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
-      '(cd apps/web && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS")',
+      '(cd apps/web && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
+      '(cd apps/site && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS")',
     d1Database: "vortex-sign-global",
     d1MigrationsCwd: "apps/api",
   },
