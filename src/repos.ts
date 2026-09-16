@@ -28,6 +28,7 @@ const repoConfigs: Record<string, RepoConfig> = {
     },
     installEnv: {
       HOME: "/tmp",
+      CI: "true",
     },
     proofCommand:
       "pnpm exec vp run build:all && pnpm exec vp check && pnpm test",
