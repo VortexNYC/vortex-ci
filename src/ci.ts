@@ -34,7 +34,7 @@ const stepConfig = {
 };
 
 const npmrcCommand =
-  'printf "@%s:registry=https://npm.pkg.github.com\\n" vortexnyc > /tmp/.npmrc && ' +
+  '{ cp .npmrc /tmp/.npmrc 2>/dev/null || printf "@%s:registry=https://npm.pkg.github.com\\n" vortexnyc > /tmp/.npmrc; } && ' +
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> /tmp/.npmrc';
 
 // Generic pipeline shape from the Cloudflare Artifacts example:
