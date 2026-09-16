@@ -52,7 +52,9 @@ const repoConfigs: Record<string, RepoConfig> = {
       CI: "true",
     },
     buildCommand: "pnpm run typecheck",
-    proofCommand: "pnpm run check && pnpm run knip",
+    // contract:check needs a .git dir, which the sandbox checkout lacks;
+    // pile's GitHub ci.yml already runs it as the PR gate.
+    proofCommand: "pnpm exec vp check && pnpm test && pnpm run knip",
     deployCommand: "pnpm exec wrangler deploy -e production",
     d1Database: "issuetracker-global",
     d1MigrationsCwd: ".",
