@@ -39,7 +39,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
       ...config.buildEnv,
     };
 
-    const proof = await ci.runner({
+    await ci.runner({
       name: "proof",
       command: `sh -c '${npmrcCommand} && ${loggedInstall} && ${config.proofCommand}'`,
       secrets: ["NPM_TOKEN"],
