@@ -30,7 +30,7 @@ const npmrcCommand =
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
 const cleanupCommand =
-  'find . -type d \\( -name node_modules -o -name dist -o -name .cache -o -name .wrangler \\) -prune -exec rm -rf {} + 2>/dev/null || true';
+  'find . -type d \\( -name node_modules -o -name dist -o -name .cache -o -name .wrangler \\) -prune -exec rm -rf {} + 2>/dev/null';
 
 export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
   protected async pipeline(
@@ -78,7 +78,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
     if (config.d1Database) {
       const migrateResult = await proofResult.runner({
         name: "migrate",
-        command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote --yes`,
+        command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
         cwd: "apps/api",
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
