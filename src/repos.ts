@@ -4,11 +4,18 @@ const repoConfigSchema = z.object({
   name: z.string(),
   buildEnv: z.record(z.string()).default({}),
   installEnv: z.record(z.string()).default({}),
-  d1Database: z.string().optional(),
+  proofCommand: z.string(),
   deployCommand: z.string(),
+  d1Database: z.string().optional(),
+  proofTimeoutMs: z.number().positive().optional(),
+  proofCommandTimeoutMs: z.number().positive().optional(),
+  deployTimeoutMs: z.number().positive().optional(),
+  deployCommandTimeoutMs: z.number().positive().optional(),
 });
 
 export type RepoConfig = z.infer<typeof repoConfigSchema>;
+
+const MINUTE = 60 * 1000;
 
 const repoConfigs: Record<string, RepoConfig> = {
   "vortex-sign": {
@@ -21,10 +28,15 @@ const repoConfigs: Record<string, RepoConfig> = {
     },
     installEnv: {
       HOME: "/tmp",
-      NPM_CONFIG_USERCONFIG: "/tmp/.npmrc",
     },
-    d1Database: "vortex-sign-global",
+    proofCommand:
+      "pnpm exec vp run build:all && pnpm exec vp check && pnpm test",
     deployCommand: "pnpm exec vp run deploy",
+    d1Database: "vortex-sign-global",
+    proofTimeoutMs: 45 * MINUTE,
+    proofCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
+    deployTimeoutMs: 45 * MINUTE,
+    deployCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
   },
 };
 

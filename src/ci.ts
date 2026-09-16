@@ -9,38 +9,18 @@ import type { Bindings } from "./env";
 import { getRepoConfig } from "./repos";
 
 const MINUTE = 60 * 1000;
-
-const stepConfig = {
-  install: {
-    timeoutMs: 20 * MINUTE,
-    commandTimeoutMs: 19 * MINUTE + 50 * 1000,
-  },
-  check: {
-    timeoutMs: 20 * MINUTE,
-    commandTimeoutMs: 19 * MINUTE + 50 * 1000,
-  },
-  build: {
-    timeoutMs: 20 * MINUTE,
-    commandTimeoutMs: 19 * MINUTE + 50 * 1000,
-  },
-  migrate: {
-    timeoutMs: 10 * MINUTE,
-    commandTimeoutMs: 9 * MINUTE + 50 * 1000,
-  },
-  deploy: {
-    timeoutMs: 45 * MINUTE,
-    commandTimeoutMs: 44 * MINUTE + 50 * 1000,
-  },
-};
+const MIGRATE_TIMEOUT_MS = 10 * MINUTE;
+const MIGRATE_COMMAND_TIMEOUT_MS = 9 * MINUTE + 50 * 1000;
 
 const npmrcCommand =
-  '{ cp .npmrc /tmp/.npmrc 2>/dev/null || printf "@%s:registry=https://npm.pkg.github.com\\n" vortexnyc > /tmp/.npmrc; } && ' +
-  'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> /tmp/.npmrc';
+  "{ cp .npmrc ~/.npmrc 2>/dev/null || printf '@vortexnyc:registry=https://npm.pkg.github.com\\n' > ~/.npmrc; } && " +
+  'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
-// Generic pipeline shape from the Cloudflare Artifacts example:
-// install -> parallel lint/test/typecheck/build -> migrate (main) -> deploy (main)
-// Per-repo commands and env are resolved from src/repos.ts.
-// Source: https://github.com/cloudflare/ci/tree/main/examples/cloudflare-artifacts
+// vortex-payments runs a single proof step for non-main and a single deploy
+// step for main. Large Vortex monorepos hit RPCTransportErrors and long restore
+// times when four parallel runners each download the install workspace snapshot.
+// A single runner per stage keeps the snapshot in one container, matches the
+// existing working pattern, and is still generic across repos.
 export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
   protected async pipeline(
     _event: WorkflowEvent<CiParams<CloudflareArtifacts>>,
@@ -51,81 +31,51 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
     const branch = _event.payload.branch;
     const config = getRepoConfig(repo);
 
-    const install = await ci.runner({
-      name: "install",
-      command: `${npmrcCommand} && pnpm install --frozen-lockfile`,
-      cache: { inputs: ["package.json", "pnpm-lock.yaml"] },
+    const baseEnv = {
+      ...config.installEnv,
+      ...config.buildEnv,
+    };
+
+    const proof = await ci.runner({
+      name: "proof",
+      command: `sh -c '${npmrcCommand} && pnpm install --frozen-lockfile && ${config.proofCommand}'`,
       secrets: ["NPM_TOKEN"],
-      env: config.installEnv,
+      env: baseEnv,
       config: {
-        timeout: stepConfig.install.timeoutMs,
-        commandTimeoutMs: stepConfig.install.commandTimeoutMs,
+        timeout: config.proofTimeoutMs ?? 30 * MINUTE,
+        commandTimeoutMs: config.proofCommandTimeoutMs ?? 29 * MINUTE + 50 * 1000,
       },
     });
-
-    const [, , , build] = await Promise.all([
-      install.runner({
-        name: "lint",
-        command: "pnpm exec vp run lint",
-        config: {
-          timeout: stepConfig.check.timeoutMs,
-          commandTimeoutMs: stepConfig.check.commandTimeoutMs,
-        },
-      }),
-      install.runner({
-        name: "typecheck",
-        command: "pnpm exec vp run typecheck",
-        config: {
-          timeout: stepConfig.check.timeoutMs,
-          commandTimeoutMs: stepConfig.check.commandTimeoutMs,
-        },
-      }),
-      install.runner({
-        name: "test",
-        command: "pnpm exec vp run test",
-        config: {
-          timeout: stepConfig.check.timeoutMs,
-          commandTimeoutMs: stepConfig.check.commandTimeoutMs,
-        },
-      }),
-      install.runner({
-        name: "build",
-        command: "pnpm exec vp run build:all",
-        env: config.buildEnv,
-        config: {
-          timeout: stepConfig.build.timeoutMs,
-          commandTimeoutMs: stepConfig.build.commandTimeoutMs,
-        },
-      }),
-    ]);
 
     if (branch !== "main") {
       return;
     }
 
     if (config.d1Database) {
-      await install.runner({
+      await proof.runner({
         name: "migrate",
         command: `cd apps/api && pnpm exec wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
         },
         config: {
-          timeout: stepConfig.migrate.timeoutMs,
-          commandTimeoutMs: stepConfig.migrate.commandTimeoutMs,
+          timeout: MIGRATE_TIMEOUT_MS,
+          commandTimeoutMs: MIGRATE_COMMAND_TIMEOUT_MS,
         },
       });
     }
 
-    await build.runner({
+    await proof.runner({
       name: "deploy",
-      command: config.deployCommand,
+      command: `sh -c '${npmrcCommand} && pnpm install --frozen-lockfile --silent && ${config.deployCommand}'`,
       cloudflareCredentials: {
         accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
       },
+      secrets: ["NPM_TOKEN"],
+      env: baseEnv,
       config: {
-        timeout: stepConfig.deploy.timeoutMs,
-        commandTimeoutMs: stepConfig.deploy.commandTimeoutMs,
+        timeout: config.deployTimeoutMs ?? 45 * MINUTE,
+        commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
       },
     });
   }
