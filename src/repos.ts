@@ -4,6 +4,7 @@ const repoConfigSchema = z.object({
   name: z.string(),
   buildEnv: z.record(z.string()).default({}),
   installEnv: z.record(z.string()).default({}),
+  buildCommand: z.string(),
   proofCommand: z.string(),
   deployCommand: z.string().optional(),
   deployCommands: z.array(z.string()).optional(),
@@ -19,6 +20,8 @@ export type RepoConfig = z.infer<typeof repoConfigSchema>;
 
 const MINUTE = 60 * 1000;
 
+const buildCommand = "pnpm exec vp run build:all";
+
 const repoConfigs: Record<string, RepoConfig> = {
   "vortex-sign": {
     name: "vortex-sign",
@@ -32,8 +35,9 @@ const repoConfigs: Record<string, RepoConfig> = {
       HOME: "/tmp",
       CI: "true",
     },
+    buildCommand,
     proofCommand:
-      "(pnpm exec vp run build:all > /tmp/build.log 2>&1; build_status=$?; tail -c 150000 /tmp/build.log; exit $build_status) && " +
+      `(${buildCommand} > /tmp/build.log 2>&1; build_status=$?; tail -c 150000 /tmp/build.log; exit $build_status) && ` +
       "(pnpm exec vp check > /tmp/check.log 2>&1; check_status=$?; tail -c 50000 /tmp/check.log; exit $check_status) && " +
       "(pnpm test > /tmp/test.log 2>&1; test_status=$?; tail -c 40000 /tmp/test.log; exit $test_status)",
     deployCommand:

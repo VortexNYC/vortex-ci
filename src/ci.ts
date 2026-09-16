@@ -13,7 +13,7 @@ const MIGRATE_TIMEOUT_MS = 10 * MINUTE;
 const MIGRATE_COMMAND_TIMEOUT_MS = 3 * MINUTE;
 
 const npmrcCommand =
-  "{ cp .npmrc ~/.npmrc 2>/dev/null || printf '@vortexnyc:registry=https://npm.pkg.github.com\\n' > ~/.npmrc; } && " +
+  '{ cp .npmrc ~/.npmrc 2>/dev/null || printf "@vortexnyc:registry=https://npm.pkg.github.com\\n" > ~/.npmrc; } && ' +
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
 const loggedInstall =
@@ -70,22 +70,21 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
       });
     }
 
-    const deployCommands = config.deployCommands ?? [config.deployCommand].filter(Boolean);
-    for (let i = 0; i < deployCommands.length; i++) {
-      const cmd = deployCommands[i];
-      const name = config.deployCommands ? `deploy-${i + 1}` : "deploy";
-      await proof.runner({
-        name,
-        command: `sh -c '${cmd}'`,
-        cloudflareCredentials: {
-          accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
-        },
-        env: baseEnv,
-        config: {
-          timeout: config.deployTimeoutMs ?? 45 * MINUTE,
-          commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
-        },
-      });
-    }
+    const deploy =
+      `sh -c '(${npmrcCommand} && ${loggedInstall} && ${config.buildCommand} && ${config.deployCommand}) ` +
+      `> /tmp/deploy.log 2>&1; status=$?; tail -c 200000 /tmp/deploy.log; exit $status'`;
+    await ci.runner({
+      name: "deploy",
+      command: deploy,
+      secrets: ["NPM_TOKEN"],
+      cloudflareCredentials: {
+        accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
+      },
+      env: baseEnv,
+      config: {
+        timeout: config.deployTimeoutMs ?? 45 * MINUTE,
+        commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
+      },
+    });
   }
 }
