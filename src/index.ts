@@ -5,8 +5,80 @@ import type { Bindings } from "./env";
 
 export { CiSandbox, CI };
 
+const TOKEN_TTL_SECONDS = 90 * 24 * 60 * 60;
+
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [aKey, bKey] = await Promise.all([
+    crypto.subtle.importKey(
+      "raw",
+      encoder.encode(a),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    ),
+    crypto.subtle.importKey(
+      "raw",
+      encoder.encode(b),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    ),
+  ]);
+  const [aMac, bMac] = await Promise.all([
+    crypto.subtle.sign("HMAC", aKey, encoder.encode("vortex-ci-admin")),
+    crypto.subtle.sign("HMAC", bKey, encoder.encode("vortex-ci-admin")),
+  ]);
+  const aBytes = new Uint8Array(aMac);
+  const bBytes = new Uint8Array(bMac);
+  let diff = aBytes.length ^ bBytes.length;
+  for (let i = 0; i < Math.max(aBytes.length, bBytes.length); i++) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+  }
+  return diff === 0;
+}
+
+async function handleAdmin(request: Request, env: Bindings): Promise<Response> {
+  const expected = env.ADMIN_TOKEN;
+  const provided = request.headers.get("authorization")?.replace(/^Bearer /i, "");
+  if (!expected || !provided || !(await timingSafeEqual(provided, expected))) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { repo?: string };
+  const repoName = body.repo;
+  if (!repoName || !/^[a-z0-9][a-z0-9-]*$/.test(repoName)) {
+    return Response.json({ error: "invalid repo name" }, { status: 400 });
+  }
+
+  try {
+    await env.ARTIFACTS.create(repoName);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== "ALREADY_EXISTS") {
+      return Response.json(
+        { error: `create failed: ${code ?? "UNKNOWN"}` },
+        { status: 502 }
+      );
+    }
+  }
+
+  const repo = await env.ARTIFACTS.get(repoName);
+  const token = await repo.createToken("write", TOKEN_TTL_SECONDS);
+  return Response.json({
+    repo: repoName,
+    remote: `https://${env.CLOUDFLARE_ACCOUNT_ID}.artifacts.cloudflare.net/git/vortex/${repoName}.git`,
+    token: token.plaintext,
+    expiresInSeconds: TOKEN_TTL_SECONDS,
+  });
+}
+
 export default {
-  fetch(_request: Request, _env: Bindings) {
+  fetch(request: Request, env: Bindings) {
+    const { pathname } = new URL(request.url);
+    if (pathname === "/admin/artifacts" && request.method === "POST") {
+      return handleAdmin(request, env);
+    }
     return new Response("vortex-ci", { status: 200 });
   },
 };

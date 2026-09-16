@@ -32,8 +32,7 @@
       {
         "type": "cf.artifacts.repo.pushed",
         "filter": {
-          "namespace": "vortex",
-          "repo_name": "vortex-sign"
+          "namespace": "vortex"
         },
         "targets": [
           {

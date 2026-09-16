@@ -109,7 +109,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
       const migrateResult = await proofResult.runner({
         name: "migrate",
         command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
-        cwd: "apps/api",
+        cwd: config.d1MigrationsCwd,
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
         },

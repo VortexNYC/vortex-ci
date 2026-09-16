@@ -9,6 +9,7 @@ const repoConfigSchema = z.object({
   deployCommand: z.string(),
   previewCommand: z.string().optional(),
   d1Database: z.string().optional(),
+  d1MigrationsCwd: z.string().default("."),
 });
 
 export type RepoConfig = z.infer<typeof repoConfigSchema>;
@@ -41,10 +42,24 @@ const repoConfigs: Record<string, RepoConfig> = {
       '(cd apps/mcp-worker && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
       '(cd apps/web && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS")',
     d1Database: "vortex-sign-global",
+    d1MigrationsCwd: "apps/api",
+  },
+  pile: {
+    name: "pile",
+    buildEnv: {},
+    installEnv: {
+      HOME: "/tmp",
+      CI: "true",
+    },
+    buildCommand: "pnpm run typecheck",
+    proofCommand: "pnpm run check && pnpm run knip",
+    deployCommand: "pnpm exec wrangler deploy -e production",
+    d1Database: "issuetracker-global",
+    d1MigrationsCwd: ".",
   },
 };
 
-const repoNameSchema = z.enum(["vortex-sign"]);
+const repoNameSchema = z.enum(["vortex-sign", "pile"]);
 
 export function getRepoConfig(repoName: unknown): RepoConfig | undefined {
   const parsed = repoNameSchema.safeParse(repoName);
