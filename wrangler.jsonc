@@ -1,0 +1,76 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vortex-ci",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "minify": true,
+  "artifacts": [
+    {
+      "binding": "ARTIFACTS",
+      "namespace": "vortex"
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "CiSandbox",
+      "image": "./Dockerfile",
+      "max_instances": 10,
+      "instance_type": "standard-4"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SANDBOX",
+        "class_name": "CiSandbox"
+      }
+    ]
+  },
+  "triggers": {
+    "events": [
+      {
+        "type": "cf.artifacts.repo.pushed",
+        "filter": {
+          "namespace": "vortex"
+        },
+        "targets": [
+          {
+            "type": "workflow",
+            "workflow_name": "vortex-ci"
+          }
+        ]
+      }
+    ]
+  },
+  "workflows": [
+    {
+      "name": "vortex-ci",
+      "binding": "CI_WORKFLOW",
+      "class_name": "CI"
+    }
+  ],
+  "exports": {
+    "CiSandbox": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "r2_buckets": [
+    {
+      "binding": "BACKUP_BUCKET",
+      "bucket_name": "vortex-ci-backups"
+    }
+  ],
+  "vars": {
+    "BACKUP_BUCKET_NAME": "vortex-ci-backups",
+    "CLOUDFLARE_ACCOUNT_ID": "31bfc2c14a28e0a39e8b9e3c556a18be",
+    "CLOUDFLARE_DEPLOY_ACCOUNT_ID": "31bfc2c14a28e0a39e8b9e3c556a18be"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  }
+}

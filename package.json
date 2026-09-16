@@ -1,0 +1,22 @@
+{
+  "name": "vortex-ci",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types --path ./src/worker-configuration.d.ts && tsc --noEmit",
+    "types": "wrangler types --path ./src/worker-configuration.d.ts",
+    "setup:r2-secrets": "node scripts/set-r2-secrets.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/ci": "0.2.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "typescript": "~5.9.3",
+    "wrangler": "^4.132.0"
+  },
+  "packageManager": "pnpm@11.13.1"
+}
