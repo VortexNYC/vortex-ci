@@ -37,10 +37,10 @@ const repoConfigs: Record<string, RepoConfig> = {
     deployCommand:
       "(pnpm exec vp run deploy > /tmp/deploy.log 2>&1; deploy_status=$?; tail -c 150000 /tmp/deploy.log; exit $deploy_status)",
     d1Database: "vortex-sign-global",
-    proofTimeoutMs: 45 * MINUTE,
-    proofCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
-    deployTimeoutMs: 45 * MINUTE,
-    deployCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
+    proofTimeoutMs: 20 * MINUTE,
+    proofCommandTimeoutMs: 15 * MINUTE,
+    deployTimeoutMs: 30 * MINUTE,
+    deployCommandTimeoutMs: 25 * MINUTE,
   },
 };
 
