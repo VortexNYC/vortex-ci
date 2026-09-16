@@ -70,6 +70,28 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
     });
 
     if (branch !== "main") {
+      if (config.previewCommand) {
+        const previewCommand =
+          `${npmrcCommand} && ` +
+          `pnpm install --frozen-lockfile && ` +
+          `${config.buildCommand} && ` +
+          `${config.previewCommand} && ` +
+          cleanupCommand;
+
+        await proofResult.runner({
+          name: "preview",
+          command: previewCommand,
+          secrets: ["NPM_TOKEN"],
+          cloudflareCredentials: {
+            accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
+          },
+          env: baseEnv,
+          config: {
+            timeout: DEPLOY_STEP_TIMEOUT_MS,
+            commandTimeoutMs: DEPLOY_COMMAND_TIMEOUT_MS,
+          },
+        });
+      }
       return;
     }
 

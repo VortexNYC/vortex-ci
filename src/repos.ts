@@ -7,6 +7,7 @@ const repoConfigSchema = z.object({
   buildCommand: z.string(),
   proofCommand: z.string(),
   deployCommand: z.string(),
+  previewCommand: z.string().optional(),
   d1Database: z.string().optional(),
 });
 
@@ -35,6 +36,10 @@ const repoConfigs: Record<string, RepoConfig> = {
       "(cd apps/api && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/mcp-worker && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/web && pnpm exec wrangler deploy -e production)",
+    previewCommand:
+      "(cd apps/api && pnpm exec wrangler versions upload -e production) && " +
+      "(cd apps/mcp-worker && pnpm exec wrangler versions upload -e production) && " +
+      "(cd apps/web && pnpm exec wrangler versions upload -e production)",
     d1Database: "vortex-sign-global",
   },
 };
