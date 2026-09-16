@@ -9,21 +9,29 @@ import type { Bindings } from "./env";
 import { getRepoConfig } from "./repos";
 
 const MINUTE = 60 * 1000;
-const MIGRATE_TIMEOUT_MS = 10 * MINUTE;
-const MIGRATE_COMMAND_TIMEOUT_MS = 3 * MINUTE;
 
+// Workflow steps must stay within Cloudflare's 30-minute ceiling and still
+// leave the sandbox time to snapshot /workspace before the step timeout fires.
+// Source: https://developers.cloudflare.com/workflows/build/rules-of-workflows/
+const PROOF_STEP_TIMEOUT_MS = 25 * MINUTE;
+const PROOF_COMMAND_TIMEOUT_MS = 20 * MINUTE;
+const MIGRATE_STEP_TIMEOUT_MS = 10 * MINUTE;
+const MIGRATE_COMMAND_TIMEOUT_MS = 3 * MINUTE;
+const DEPLOY_STEP_TIMEOUT_MS = 30 * MINUTE;
+const DEPLOY_COMMAND_TIMEOUT_MS = 25 * MINUTE;
+
+// The sandbox runs every command as a wrapped subshell, so we only need the
+// shell string itself. We deliberately keep the workspace free of node_modules
+// and build artifacts before the snapshot is taken, otherwise each backup
+// becomes a multi-gigabyte squashfs upload that exhausts the step margin and
+// triggers RPCTransportError / internal Workflow failures.
 const npmrcCommand =
   '{ cp .npmrc ~/.npmrc 2>/dev/null || printf "@vortexnyc:registry=https://npm.pkg.github.com\\n" > ~/.npmrc; } && ' +
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
-const loggedInstall =
-  "(pnpm install --frozen-lockfile > /tmp/ci-install.log 2>&1; install_status=$?; tail -c 40000 /tmp/ci-install.log; [ $install_status -eq 0 ] || exit $install_status)";
+const cleanupCommand =
+  'find . -type d \\( -name node_modules -o -name dist -o -name .cache -o -name .wrangler \\) -prune -exec rm -rf {} + 2>/dev/null || true';
 
-// vortex-payments runs a single proof step for non-main and a single deploy
-// step for main. Large Vortex monorepos hit RPCTransportErrors and long restore
-// times when four parallel runners each download the install workspace snapshot.
-// A single runner per stage keeps the snapshot in one container, matches the
-// existing working pattern, and is still generic across repos.
 export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
   protected async pipeline(
     _event: WorkflowEvent<CiParams<CloudflareArtifacts>>,
@@ -34,19 +42,30 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
     const branch = _event.payload.branch;
     const config = getRepoConfig(repo);
 
+    if (!config) {
+      console.log(`[vortex-ci] skipping unsupported repo: ${String(repo)}`);
+      return;
+    }
+
     const baseEnv = {
       ...config.installEnv,
       ...config.buildEnv,
     };
 
-    await ci.runner({
+    const proofCommand =
+      `${npmrcCommand} && ` +
+      `pnpm install --frozen-lockfile && ` +
+      `${config.proofCommand} && ` +
+      cleanupCommand;
+
+    const proofResult = await ci.runner({
       name: "proof",
-      command: `sh -c '${npmrcCommand} && ${loggedInstall} && ${config.proofCommand}'`,
+      command: proofCommand,
       secrets: ["NPM_TOKEN"],
       env: baseEnv,
       config: {
-        timeout: config.proofTimeoutMs ?? 30 * MINUTE,
-        commandTimeoutMs: config.proofCommandTimeoutMs ?? 29 * MINUTE + 50 * 1000,
+        timeout: PROOF_STEP_TIMEOUT_MS,
+        commandTimeoutMs: PROOF_COMMAND_TIMEOUT_MS,
       },
     });
 
@@ -54,36 +73,43 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
       return;
     }
 
+    let deployInput = proofResult;
+
     if (config.d1Database) {
-      await ci.runner({
+      const migrateResult = await proofResult.runner({
         name: "migrate",
-        command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
+        command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote --yes`,
         cwd: "apps/api",
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
         },
         env: baseEnv,
         config: {
-          timeout: MIGRATE_TIMEOUT_MS,
+          timeout: MIGRATE_STEP_TIMEOUT_MS,
           commandTimeoutMs: MIGRATE_COMMAND_TIMEOUT_MS,
         },
       });
+      deployInput = migrateResult;
     }
 
-    const deploy =
-      `sh -c '(${npmrcCommand} && ${loggedInstall} && ${config.buildCommand} && ${config.deployCommand}) ` +
-      `> /tmp/deploy.log 2>&1; status=$?; tail -c 200000 /tmp/deploy.log; exit $status'`;
-    await ci.runner({
+    const deployCommand =
+      `${npmrcCommand} && ` +
+      `pnpm install --frozen-lockfile && ` +
+      `${config.buildCommand} && ` +
+      `${config.deployCommand} && ` +
+      cleanupCommand;
+
+    await deployInput.runner({
       name: "deploy",
-      command: deploy,
+      command: deployCommand,
       secrets: ["NPM_TOKEN"],
       cloudflareCredentials: {
-        accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
+        accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
       },
       env: baseEnv,
       config: {
-        timeout: config.deployTimeoutMs ?? 45 * MINUTE,
-        commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
+        timeout: DEPLOY_STEP_TIMEOUT_MS,
+        commandTimeoutMs: DEPLOY_COMMAND_TIMEOUT_MS,
       },
     });
   }

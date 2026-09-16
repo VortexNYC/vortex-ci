@@ -32,7 +32,8 @@
       {
         "type": "cf.artifacts.repo.pushed",
         "filter": {
-          "namespace": "vortex"
+          "namespace": "vortex",
+          "repo_name": "vortex-sign"
         },
         "targets": [
           {
@@ -64,8 +65,7 @@
   ],
   "vars": {
     "BACKUP_BUCKET_NAME": "vortex-ci-backups",
-    "CLOUDFLARE_ACCOUNT_ID": "31bfc2c14a28e0a39e8b9e3c556a18be",
-    "CLOUDFLARE_DEPLOY_ACCOUNT_ID": "31bfc2c14a28e0a39e8b9e3c556a18be"
+    "CLOUDFLARE_ACCOUNT_ID": "31bfc2c14a28e0a39e8b9e3c556a18be"
   },
   "observability": {
     "enabled": true,

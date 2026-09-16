@@ -6,19 +6,11 @@ const repoConfigSchema = z.object({
   installEnv: z.record(z.string()).default({}),
   buildCommand: z.string(),
   proofCommand: z.string(),
-  deployCommand: z.string().optional(),
-  deployCommands: z.array(z.string()).optional(),
+  deployCommand: z.string(),
   d1Database: z.string().optional(),
-  proofTimeoutMs: z.number().positive().optional(),
-  proofCommandTimeoutMs: z.number().positive().optional(),
-  deployTimeoutMs: z.number().positive().optional(),
-  deployCommandTimeoutMs: z.number().positive().optional(),
-  perDeployTimeoutMs: z.number().positive().optional(),
 });
 
 export type RepoConfig = z.infer<typeof repoConfigSchema>;
-
-const MINUTE = 60 * 1000;
 
 const buildCommand = "pnpm exec vp run build:all";
 
@@ -36,10 +28,7 @@ const repoConfigs: Record<string, RepoConfig> = {
       CI: "true",
     },
     buildCommand,
-    proofCommand:
-      `(${buildCommand} > /tmp/build.log 2>&1; build_status=$?; tail -c 150000 /tmp/build.log; exit $build_status) && ` +
-      "(pnpm exec vp check > /tmp/check.log 2>&1; check_status=$?; tail -c 50000 /tmp/check.log; exit $check_status) && " +
-      "(pnpm test > /tmp/test.log 2>&1; test_status=$?; tail -c 40000 /tmp/test.log; exit $test_status)",
+    proofCommand: `${buildCommand} && pnpm exec vp check && pnpm test`,
     deployCommand:
       "(cd apps/anydoc-worker && pnpm exec wrangler deploy) && " +
       "(cd apps/convert-worker && pnpm exec wrangler deploy) && " +
@@ -47,20 +36,16 @@ const repoConfigs: Record<string, RepoConfig> = {
       "(cd apps/mcp-worker && pnpm exec wrangler deploy) && " +
       "(cd apps/web && pnpm exec wrangler deploy)",
     d1Database: "vortex-sign-global",
-    proofTimeoutMs: 30 * MINUTE,
-    proofCommandTimeoutMs: 29 * MINUTE + 50 * 1000,
-    deployTimeoutMs: 45 * MINUTE,
-    deployCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
   },
 };
 
 const repoNameSchema = z.enum(["vortex-sign"]);
 
-export function getRepoConfig(repoName: unknown): RepoConfig {
-  const name = repoNameSchema.parse(repoName);
-  const config = repoConfigs[name];
-  if (!config) {
-    throw new Error(`Unsupported repository: ${String(name)}`);
+export function getRepoConfig(repoName: unknown): RepoConfig | undefined {
+  const parsed = repoNameSchema.safeParse(repoName);
+  if (!parsed.success) {
+    return undefined;
   }
-  return repoConfigSchema.parse(config);
+  const config = repoConfigs[parsed.data];
+  return config ? repoConfigSchema.parse(config) : undefined;
 }
