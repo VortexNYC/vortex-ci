@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+tone_instructions: "Be concise. Question requirements. Prefer deletion and simplification."
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  review_details: true
+  in_progress_fortune: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  auto_title_placeholder: "@coderabbitai"
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+    base_branches:
+      - ".*"
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/site/dist/**"
+    - "!**/_generated/**"
+    - "!**/*.d.ts"
+    - "!**/*.lock"
+    - "!**/*.svg"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.gif"
+    - "!**/*.ico"
+    - "!**/*.woff*"
+    - "!**/*.ttf"
+    - "!**/*.eot"
+    - "!docs/**"
+    - "!.changeset/**"
+
+  path_instructions:
+    - path: "apps/api/src/**/*.ts"
+      instructions: |
+        Cloudflare Worker API (Hono + Drizzle + D1/R2 + wrangler).
+        - pnpm only; no npm/yarn/bun.
+        - No `any`; use `unknown` and narrow.
+        - No `@ts-ignore`, `eslint-disable`, or `biome-ignore`.
+        - Parse all untrusted input with Zod; no unsafe casts.
+        - No secrets, PII, or AI attribution in commits/PRs.
+        - Auth is Vortex Auth (Better Auth); Clerk is banned.
+        - Native-first: prefer Hono/Drizzle/Cloudflare primitives before hand-rolling.
+        - Money math routes through `@vortexnyc/money`; no hand-rolled float arithmetic.
+        - Migrations: minimal hand-written `.sql` with matching Drizzle snapshots.
+    - path: "apps/web/src/**/*.{ts,tsx}"
+      instructions: |
+        React 19 + TanStack Router + Kumo UI product app.
+        - UI primitives come from `@cloudflare/kumo/components/*`; no ad-hoc replacements.
+        - No `any`; use `unknown` and narrow.
+        - No `@ts-ignore`, `eslint-disable`, or `biome-ignore`.
+        - Use TanStack Router patterns; don't edit `routeTree.gen.ts`.
+        - E2E selectors use `data-testid`, not CSS classes.
+    - path: "apps/landing/**/*.{ts,tsx,mdx}"
+      instructions: |
+        Fumadocs + TanStack Start landing/docs site.
+        - Don't hand-edit generated files under `.source/` or `content/docs/api-reference/`.
+        - Update `apps/landing/openapi.yaml` and regenerate docs instead.
+
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+
+  tools:
+    ast-grep:
+      enabled: false
+    biome:
+      enabled: false
+    hadolint:
+      enabled: false
+    languagetool:
+      enabled: false
+    markdownlint:
+      enabled: true
+    phpstan:
+      enabled: false
+    psscriptanalyzer:
+      enabled: false
+    ruff:
+      enabled: false
+    shellcheck:
+      enabled: true
+    swiftlint:
+      enabled: false
+    github-checks:
+      enabled: true
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+
+chat:
+  auto_reply: true
