@@ -10,7 +10,7 @@ import { getRepoConfig } from "./repos";
 
 const MINUTE = 60 * 1000;
 const MIGRATE_TIMEOUT_MS = 10 * MINUTE;
-const MIGRATE_COMMAND_TIMEOUT_MS = 9 * MINUTE + 50 * 1000;
+const MIGRATE_COMMAND_TIMEOUT_MS = 3 * MINUTE;
 
 const npmrcCommand =
   "{ cp .npmrc ~/.npmrc 2>/dev/null || printf '@vortexnyc:registry=https://npm.pkg.github.com\\n' > ~/.npmrc; } && " +
@@ -52,9 +52,10 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
     }
 
     if (config.d1Database) {
-      await proof.runner({
+      await ci.runner({
         name: "migrate",
-        command: `cd apps/api && pnpm exec wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
+        command: `wrangler d1 migrations apply ${config.d1Database} --env production --remote`,
+        cwd: "apps/api",
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
         },
