@@ -5,12 +5,14 @@ const repoConfigSchema = z.object({
   buildEnv: z.record(z.string()).default({}),
   installEnv: z.record(z.string()).default({}),
   proofCommand: z.string(),
-  deployCommand: z.string(),
+  deployCommand: z.string().optional(),
+  deployCommands: z.array(z.string()).optional(),
   d1Database: z.string().optional(),
   proofTimeoutMs: z.number().positive().optional(),
   proofCommandTimeoutMs: z.number().positive().optional(),
   deployTimeoutMs: z.number().positive().optional(),
   deployCommandTimeoutMs: z.number().positive().optional(),
+  perDeployTimeoutMs: z.number().positive().optional(),
 });
 
 export type RepoConfig = z.infer<typeof repoConfigSchema>;
@@ -35,12 +37,16 @@ const repoConfigs: Record<string, RepoConfig> = {
       "(pnpm exec vp check > /tmp/check.log 2>&1; check_status=$?; tail -c 50000 /tmp/check.log; exit $check_status) && " +
       "(pnpm test > /tmp/test.log 2>&1; test_status=$?; tail -c 40000 /tmp/test.log; exit $test_status)",
     deployCommand:
-      "(pnpm exec vp run deploy > /tmp/deploy.log 2>&1; deploy_status=$?; tail -c 150000 /tmp/deploy.log; exit $deploy_status)",
+      "(cd apps/anydoc-worker && pnpm exec wrangler deploy) && " +
+      "(cd apps/convert-worker && pnpm exec wrangler deploy) && " +
+      "(cd apps/api && pnpm exec wrangler deploy -e production) && " +
+      "(cd apps/mcp-worker && pnpm exec wrangler deploy) && " +
+      "(cd apps/web && pnpm exec wrangler deploy)",
     d1Database: "vortex-sign-global",
-    proofTimeoutMs: 20 * MINUTE,
-    proofCommandTimeoutMs: 15 * MINUTE,
-    deployTimeoutMs: 30 * MINUTE,
-    deployCommandTimeoutMs: 25 * MINUTE,
+    proofTimeoutMs: 30 * MINUTE,
+    proofCommandTimeoutMs: 29 * MINUTE + 50 * 1000,
+    deployTimeoutMs: 45 * MINUTE,
+    deployCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
   },
 };
 

@@ -1,0 +1,12 @@
+diff --git a/src/ci/runners/sandbox.ts b/src/ci/runners/sandbox.ts
+index 4fb4a42354cdc9fbc18c930b0f3396c7a979d036..a825acda425dbf0ed4072268b1a2f5d3fb7a76c4 100644
+--- a/src/ci/runners/sandbox.ts
++++ b/src/ci/runners/sandbox.ts
+@@ -101,6 +101,7 @@ export class SandboxRunner implements Runner<DirectoryBackup> {
+         multipart: true,
+         ttl: input.ttlSeconds,
+         localBucket,
++        gitignore: false,
+       });
+       const rawLogs = await readLogs(sandbox);
+       const streams = [rawLogs.stdout, rawLogs.stderr].filter(

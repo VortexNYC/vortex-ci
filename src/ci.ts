@@ -70,18 +70,22 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
       });
     }
 
-    await proof.runner({
-      name: "deploy",
-      command: `sh -c '${npmrcCommand} && ${loggedInstall} && ${config.deployCommand}'`,
-      cloudflareCredentials: {
-        accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
-      },
-      secrets: ["NPM_TOKEN"],
-      env: baseEnv,
-      config: {
-        timeout: config.deployTimeoutMs ?? 45 * MINUTE,
-        commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
-      },
-    });
+    const deployCommands = config.deployCommands ?? [config.deployCommand].filter(Boolean);
+    for (let i = 0; i < deployCommands.length; i++) {
+      const cmd = deployCommands[i];
+      const name = config.deployCommands ? `deploy-${i + 1}` : "deploy";
+      await proof.runner({
+        name,
+        command: `sh -c '${cmd}'`,
+        cloudflareCredentials: {
+          accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
+        },
+        env: baseEnv,
+        config: {
+          timeout: config.deployTimeoutMs ?? 45 * MINUTE,
+          commandTimeoutMs: config.deployCommandTimeoutMs ?? 44 * MINUTE + 50 * 1000,
+        },
+      });
+    }
   }
 }
