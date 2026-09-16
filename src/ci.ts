@@ -17,7 +17,7 @@ const npmrcCommand =
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
 const loggedInstall =
-  "(pnpm install --frozen-lockfile > /tmp/ci-install.log 2>&1; install_status=$?; tail -c 100000 /tmp/ci-install.log; [ $install_status -eq 0 ] || exit $install_status)";
+  "(pnpm install --frozen-lockfile > /tmp/ci-install.log 2>&1; install_status=$?; tail -c 40000 /tmp/ci-install.log; [ $install_status -eq 0 ] || exit $install_status)";
 
 // vortex-payments runs a single proof step for non-main and a single deploy
 // step for main. Large Vortex monorepos hit RPCTransportErrors and long restore

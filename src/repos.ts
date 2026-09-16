@@ -31,11 +31,11 @@ const repoConfigs: Record<string, RepoConfig> = {
       CI: "true",
     },
     proofCommand:
-      "(pnpm exec vp run build:all > /tmp/build.log 2>&1; build_status=$?; tail -c 250000 /tmp/build.log; exit $build_status) && " +
-      "(pnpm exec vp check > /tmp/check.log 2>&1; check_status=$?; tail -c 100000 /tmp/check.log; exit $check_status) && " +
-      "(pnpm test > /tmp/test.log 2>&1; test_status=$?; tail -c 100000 /tmp/test.log; exit $test_status)",
+      "(pnpm exec vp run build:all > /tmp/build.log 2>&1; build_status=$?; tail -c 150000 /tmp/build.log; exit $build_status) && " +
+      "(pnpm exec vp check > /tmp/check.log 2>&1; check_status=$?; tail -c 50000 /tmp/check.log; exit $check_status) && " +
+      "(pnpm test > /tmp/test.log 2>&1; test_status=$?; tail -c 40000 /tmp/test.log; exit $test_status)",
     deployCommand:
-      "(pnpm exec vp run deploy > /tmp/deploy.log 2>&1; deploy_status=$?; tail -c 250000 /tmp/deploy.log; exit $deploy_status)",
+      "(pnpm exec vp run deploy > /tmp/deploy.log 2>&1; deploy_status=$?; tail -c 150000 /tmp/deploy.log; exit $deploy_status)",
     d1Database: "vortex-sign-global",
     proofTimeoutMs: 45 * MINUTE,
     proofCommandTimeoutMs: 44 * MINUTE + 50 * 1000,
