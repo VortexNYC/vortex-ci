@@ -16,6 +16,9 @@ const npmrcCommand =
   "{ cp .npmrc ~/.npmrc 2>/dev/null || printf '@vortexnyc:registry=https://npm.pkg.github.com\\n' > ~/.npmrc; } && " +
   'printf "//npm.pkg.github.com/:_authToken=%s\\n" "$NPM_TOKEN" >> ~/.npmrc';
 
+const loggedInstall =
+  "(pnpm install --frozen-lockfile > /tmp/ci-install.log 2>&1; install_status=$?; tail -c 100000 /tmp/ci-install.log; [ $install_status -eq 0 ] || exit $install_status)";
+
 // vortex-payments runs a single proof step for non-main and a single deploy
 // step for main. Large Vortex monorepos hit RPCTransportErrors and long restore
 // times when four parallel runners each download the install workspace snapshot.
@@ -38,7 +41,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
 
     const proof = await ci.runner({
       name: "proof",
-      command: `sh -c '${npmrcCommand} && pnpm install --frozen-lockfile && ${config.proofCommand}'`,
+      command: `sh -c '${npmrcCommand} && ${loggedInstall} && ${config.proofCommand}'`,
       secrets: ["NPM_TOKEN"],
       env: baseEnv,
       config: {
@@ -69,7 +72,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
 
     await proof.runner({
       name: "deploy",
-      command: `sh -c '${npmrcCommand} && pnpm install --frozen-lockfile --silent && ${config.deployCommand}'`,
+      command: `sh -c '${npmrcCommand} && ${loggedInstall} && ${config.deployCommand}'`,
       cloudflareCredentials: {
         accountId: this.env.CLOUDFLARE_DEPLOY_ACCOUNT_ID,
       },
