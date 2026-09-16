@@ -33,7 +33,7 @@ const repoConfigs: Record<string, RepoConfig> = {
       "(cd apps/anydoc-worker && pnpm exec wrangler deploy) && " +
       "(cd apps/convert-worker && pnpm exec wrangler deploy) && " +
       "(cd apps/api && pnpm exec wrangler deploy -e production) && " +
-      "(cd apps/mcp-worker && pnpm exec wrangler deploy) && " +
+      "(cd apps/mcp-worker && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/web && pnpm exec wrangler deploy)",
     d1Database: "vortex-sign-global",
   },
