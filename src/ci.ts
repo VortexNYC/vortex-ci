@@ -58,6 +58,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
         cloudflareCredentials: {
           accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
         },
+        env: baseEnv,
         config: {
           timeout: MIGRATE_TIMEOUT_MS,
           commandTimeoutMs: MIGRATE_COMMAND_TIMEOUT_MS,
