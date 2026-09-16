@@ -71,6 +71,14 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
 
     if (branch !== "main") {
       if (config.previewCommand) {
+        // Stable per-branch preview alias, e.g. fix-foo-seal-web.<sub>.workers.dev.
+        const previewAlias = (branch ?? "preview")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40);
+        const previewEnv = { ...baseEnv, CI_PREVIEW_ALIAS: previewAlias };
+
         const previewCommand =
           `${npmrcCommand} && ` +
           `pnpm install --frozen-lockfile && ` +
@@ -85,7 +93,7 @@ export class CI extends CIWorkflow<CloudflareArtifacts, Bindings> {
           cloudflareCredentials: {
             accountId: this.env.CLOUDFLARE_ACCOUNT_ID,
           },
-          env: baseEnv,
+          env: previewEnv,
           config: {
             timeout: DEPLOY_STEP_TIMEOUT_MS,
             commandTimeoutMs: DEPLOY_COMMAND_TIMEOUT_MS,
