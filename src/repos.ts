@@ -30,11 +30,11 @@ const repoConfigs: Record<string, RepoConfig> = {
     buildCommand,
     proofCommand: `${buildCommand} && pnpm exec vp check && pnpm test`,
     deployCommand:
-      "(cd apps/anydoc-worker && pnpm exec wrangler deploy) && " +
-      "(cd apps/convert-worker && pnpm exec wrangler deploy) && " +
+      "(cd apps/anydoc-worker && pnpm exec wrangler deploy -e production) && " +
+      "(cd apps/convert-worker && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/api && pnpm exec wrangler deploy -e production) && " +
       "(cd apps/mcp-worker && pnpm exec wrangler deploy -e production) && " +
-      "(cd apps/web && pnpm exec wrangler deploy)",
+      "(cd apps/web && pnpm exec wrangler deploy -e production)",
     d1Database: "vortex-sign-global",
   },
 };
