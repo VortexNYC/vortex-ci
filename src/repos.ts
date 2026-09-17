@@ -48,7 +48,7 @@ const repoConfigs: Record<string, RepoConfig> = {
       '(cd apps/web && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
       '(cd apps/site && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS") && ' +
       '(cd apps/docs && pnpm exec wrangler versions upload -e production --preview-alias "$CI_PREVIEW_ALIAS")',
-    d1Database: "vortex-sign-global",
+    d1Database: "seal-global",
     d1MigrationsCwd: "apps/api",
   },
   pile: {
