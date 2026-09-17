@@ -23,6 +23,9 @@ const repoConfigs: Record<string, RepoConfig> = {
       VITE_API_URL: "https://api.seal.nyc",
       VITE_BETTER_AUTH_URL: "https://api.seal.nyc",
       VITE_APP_URL: "https://app.seal.nyc",
+      // apps/site: @astrojs/cloudflare resolves wrangler env at build time;
+      // without this the generated config ships dev bindings to production.
+      CLOUDFLARE_ENV: "production",
       HOME: "/tmp",
     },
     installEnv: {
