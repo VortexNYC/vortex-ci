@@ -17,8 +17,8 @@ export type RepoConfig = z.infer<typeof repoConfigSchema>;
 const buildCommand = "pnpm exec vp run build:all";
 
 const repoConfigs: Record<string, RepoConfig> = {
-  "vortex-sign": {
-    name: "vortex-sign",
+  "seal": {
+    name: "seal",
     buildEnv: {
       VITE_API_URL: "https://api.seal.nyc",
       VITE_BETTER_AUTH_URL: "https://api.seal.nyc",
@@ -60,7 +60,7 @@ const repoConfigs: Record<string, RepoConfig> = {
     },
     buildCommand: "pnpm exec vp run typecheck",
     // contract:check needs git; GitHub ci.yml owns it. knip is GitHub-only,
-    // same split as vortex-sign.
+    // same split as seal.
     proofCommand:
       "pnpm exec vp run typecheck && pnpm exec vp check && pnpm test",
     deployCommand: "pnpm exec wrangler deploy -e production",
@@ -69,7 +69,7 @@ const repoConfigs: Record<string, RepoConfig> = {
   },
 };
 
-const repoNameSchema = z.enum(["vortex-sign", "pile"]);
+const repoNameSchema = z.enum(["seal", "pile"]);
 
 export function getRepoConfig(repoName: unknown): RepoConfig | undefined {
   const parsed = repoNameSchema.safeParse(repoName);
